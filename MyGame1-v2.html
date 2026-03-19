@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>接金币 2.0</title>
+  <style>
+    :root {
+      --bg-1: #07111f;
+      --bg-2: #102447;
+      --bg-3: #1e3a8a;
+      --panel: rgba(255, 255, 255, 0.08);
+      --line: rgba(255, 255, 255, 0.12);
+      --text: #eff6ff;
+      --muted: #bfdbfe;
+      --gold: #fbbf24;
+      --gold-2: #fde68a;
+      --danger: #fb7185;
+      --good: #34d399;
+      --purple: #a78bfa;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: hidden;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(251, 191, 36, 0.2), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(167, 139, 250, 0.16), transparent 18%),
+        linear-gradient(180deg, var(--bg-3) 0%, var(--bg-2) 38%, var(--bg-1) 100%);
+    }
+
+    .game-shell {
+      width: min(94vw, 560px);
+      padding: 18px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .title-group h1 {
+      font-size: clamp(28px, 5vw, 38px);
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+
+    .title-group p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 340px;
+    }
+
+    .badge {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+      font-size: 13px;
+      font-weight: 700;
+      color: #fef3c7;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      padding: 12px 10px;
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, rgba(251, 191, 36, 0.15), transparent 26%),
+        linear-gradient(180deg, rgba(6, 13, 26, 0.15), rgba(6, 13, 26, 0.45)),
+        linear-gradient(180deg, #1d4ed8 0%, #102447 55%, #08111f 100%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 5;
+      background: transparent;
+    }
+
+    .top-hint {
+      margin-top: 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(2, 6, 23, 0.72);
+      z-index: 4;
+      transition: opacity 0.22s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .card {
+      width: min(100%, 380px);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+      padding: 28px 22px 24px;
+      text-align: center;
+    }
+
+    .emoji {
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+
+    .card h2 {
+      font-size: 28px;
+      line-height: 1.1;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    .highlight {
+      margin-bottom: 16px;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--gold-2);
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      text-align: left;
+      margin-bottom: 18px;
+      color: #dbeafe;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      outline: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 12px 22px;
+      font-size: 15px;
+      font-weight: 800;
+      color: #08111f;
+      background: linear-gradient(180deg, #fde68a 0%, #fbbf24 100%);
+      box-shadow: 0 10px 22px rgba(251, 191, 36, 0.3);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.14);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: none;
+    }
+
+    .footer {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    @media (max-width: 620px) {
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-shell">
+    <div class="header">
+      <div class="title-group">
+        <h1>接金币 Receive gold coins</h1>
+      </div>
+      <div class="badge">站内试玩版</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">分数</div>
+        <div class="stat-value" id="score">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">最高分</div>
+        <div class="stat-value" id="bestScore">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">连击</div>
+        <div class="stat-value" id="combo">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">生命</div>
+        <div class="stat-value" id="lives">3</div>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="game" width="520" height="650"></canvas>
+
+      <div class="overlay" id="startOverlay">
+        <div class="card">
+          <div class="emoji">🪙</div>
+          <h2>接金币，冲高分</h2>
+          <p>控制下方收集器左右移动，接住金币得分。连续接到会有连击奖励，但碰到炸弹会掉血，漏掉太多也会打断节奏。</p>
+          <div class="controls">
+            <div>1. 键盘：按 <strong>A / D</strong> 或 <strong>← / →</strong> 左右移动</div>
+            <div>2. 手机：按住屏幕左右区域也能操作</div>
+            <div>3. 金色大币值更高，紫色幸运币有额外奖励</div>
+          </div>
+          <div class="actions">
+            <button id="startBtn">开始游戏</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="pauseOverlay">
+        <div class="card">
+          <div class="emoji">⏸️</div>
+          <h2>游戏暂停</h2>
+          <p>你可以继续挑战，或者先回到项目详情页再试玩。</p>
+          <div class="actions">
+            <button id="resumeBtn">继续游戏</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="card">
+          <div class="emoji">🏁</div>
+          <h2>本局结束</h2>
+          <div class="highlight">最终得分：<span id="finalScore">0</span></div>
+          <div class="actions">
+            <button id="restartBtn">再来一局</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="top-hint">提示：连续接金币会提高连击；紫色幸运币额外加分；碰到炸弹会掉 1 条命。</div>
+    <div class="footer">单文件 HTML + CSS + JavaScript，适合直接嵌入个人网站试玩。</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("score");
+    const bestScoreEl = document.getElementById("bestScore");
+    const comboEl = document.getElementById("combo");
+    const livesEl = document.getElementById("lives");
+    const finalScoreEl = document.getElementById("finalScore");
+    const startOverlay = document.getElementById("startOverlay");
+    const pauseOverlay = document.getElementById("pauseOverlay");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+
+    const startBtn = document.getElementById("startBtn");
+    const resumeBtn = document.getElementById("resumeBtn");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    let animationId = null;
+    let running = false;
+    let paused = false;
+    let score = 0;
+    let combo = 0;
+    let lives = 3;
+    let bestScore = Number(localStorage.getItem("coinCatchBestScoreV2") || 0);
+    bestScoreEl.textContent = bestScore;
+
+    const player = {
+      w: 128,
+      h: 28,
+      x: W / 2 - 51,
+      y: H - 122,
+      speed: 8.5,
+      dx: 0
+    };
+
+    let items = [];
+    let particles = [];
+    let glowBursts = [];
+    let spawnTimer = 0;
+    let difficultyTimer = 0;
+    let lastTime = 0;
+    let spawnInterval = 680;
+    let baseFallSpeed = 3.2;
+
+    const keyState = {
+      left: false,
+      right: false
+    };
+
+    function resetGame() {
+      score = 0;
+      combo = 0;
+      lives = 3;
+      items = [];
+      particles = [];
+      glowBursts = [];
+      spawnTimer = 0;
+      difficultyTimer = 0;
+      lastTime = 0;
+      spawnInterval = 680;
+      baseFallSpeed = 3.2;
+      player.x = W / 2 - player.w / 2;
+      updateHud();
+    }
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      comboEl.textContent = combo;
+      livesEl.textContent = lives;
+      bestScoreEl.textContent = bestScore;
+    }
+
+    function startGame() {
+      resetGame();
+      running = true;
+      paused = false;
+      startOverlay.classList.add("hidden");
+      pauseOverlay.classList.add("hidden");
+      gameOverOverlay.classList.add("hidden");
+      cancelAnimationFrame(animationId);
+      animationId = requestAnimationFrame(loop);
+    }
+
+    function pauseGame() {
+      if (!running) {
+        return;
+      }
+      paused = true;
+      running = false;
+      cancelAnimationFrame(animationId);
+      pauseOverlay.classList.remove("hidden");
+    }
+
+    function resumeGame() {
+      if (!paused) {
+        return;
+      }
+      paused = false;
+      running = true;
+      pauseOverlay.classList.add("hidden");
+      lastTime = 0;
+      animationId = requestAnimationFrame(loop);
+    }
+
+    function endGame() {
+      running = false;
+      paused = false;
+      cancelAnimationFrame(animationId);
+
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem("coinCatchBestScoreV2", String(bestScore));
+      }
+
+      updateHud();
+      finalScoreEl.textContent = score;
+      gameOverOverlay.classList.remove("hidden");
+    }
+
+    function spawnItem() {
+      const roll = Math.random();
+      let type = "coin";
+      if (roll > 0.88) {
+        type = "bomb";
+      } else if (roll > 0.72) {
+        type = "bonus";
+      }
+
+      const size = type === "bomb" ? 28 : type === "bonus" ? 24 : 22 + Math.random() * 10;
+      items.push({
+        type,
+        x: 18 + Math.random() * (W - 36 - size),
+        y: -40,
+        size,
+        speed: baseFallSpeed + Math.random() * 1.6,
+        sway: Math.random() * Math.PI * 2,
+        rotate: Math.random() * 0.04 - 0.02
+      });
+    }
+
+    function createBurst(x, y, color) {
+      for (let i = 0; i < 10; i += 1) {
+        particles.push({
+          x,
+          y,
+          vx: Math.cos((Math.PI * 2 * i) / 10) * (1 + Math.random() * 2.4),
+          vy: Math.sin((Math.PI * 2 * i) / 10) * (1 + Math.random() * 2.4) - 1,
+          life: 28 + Math.random() * 12,
+          color
+        });
+      }
+    }
+
+    function createGlow(x, y, color) {
+      glowBursts.push({
+        x,
+        y,
+        radius: 6,
+        alpha: 0.36,
+        color
+      });
+    }
+
+    function update(dt) {
+      if (keyState.left && !keyState.right) {
+        player.dx = -player.speed;
+      } else if (keyState.right && !keyState.left) {
+        player.dx = player.speed;
+      } else {
+        player.dx *= 0.88;
+      }
+
+      player.x += player.dx;
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.w > W) player.x = W - player.w;
+
+      spawnTimer += dt;
+      difficultyTimer += dt;
+
+      if (difficultyTimer > 5000) {
+        difficultyTimer = 0;
+        spawnInterval = Math.max(330, spawnInterval - 35);
+        baseFallSpeed = Math.min(6.8, baseFallSpeed + 0.25);
+      }
+
+      if (spawnTimer > spawnInterval) {
+        spawnTimer = 0;
+        spawnItem();
+      }
+
+      for (let i = items.length - 1; i >= 0; i -= 1) {
+        const item = items[i];
+        item.sway += 0.06;
+        item.y += item.speed;
+        item.x += Math.sin(item.sway) * 0.6;
+
+        const caught =
+          item.y + item.size >= player.y &&
+          item.y <= player.y + player.h &&
+          item.x + item.size >= player.x &&
+          item.x <= player.x + player.w;
+
+        if (caught) {
+          if (item.type === "bomb") {
+            lives -= 1;
+            combo = 0;
+            createBurst(item.x + item.size / 2, item.y + item.size / 2, "251,113,133");
+            createGlow(item.x + item.size / 2, item.y + item.size / 2, "251,113,133");
+          } else if (item.type === "bonus") {
+            combo += 1;
+            score += 12 + combo * 2;
+            createBurst(item.x + item.size / 2, item.y + item.size / 2, "167,139,250");
+            createGlow(item.x + item.size / 2, item.y + item.size / 2, "167,139,250");
+          } else {
+            combo += 1;
+            const comboBonus = Math.min(8, Math.floor(combo / 3));
+            score += 6 + comboBonus;
+            createBurst(item.x + item.size / 2, item.y + item.size / 2, "251,191,36");
+            createGlow(item.x + item.size / 2, item.y + item.size / 2, "251,191,36");
+          }
+
+          items.splice(i, 1);
+          updateHud();
+          if (lives <= 0) {
+            endGame();
+            return;
+          }
+          continue;
+        }
+
+        if (item.y > H + 50) {
+          if (item.type !== "bomb") {
+            combo = 0;
+          }
+          items.splice(i, 1);
+          updateHud();
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i -= 1) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.04;
+        p.life -= 1;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+
+      for (let i = glowBursts.length - 1; i >= 0; i -= 1) {
+        const glow = glowBursts[i];
+        glow.radius += 1.6;
+        glow.alpha -= 0.02;
+        if (glow.alpha <= 0) {
+          glowBursts.splice(i, 1);
+        }
+      }
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, W, H);
+
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, "rgba(255,255,255,0.08)");
+      grad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.strokeStyle = "rgba(255,255,255,0.06)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 10; i += 1) {
+        const y = 60 + i * 58;
+        ctx.beginPath();
+        ctx.moveTo(20, y);
+        ctx.lineTo(W - 20, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawPlayer() {
+      const x = player.x;
+      const y = player.y;
+
+      ctx.save();
+      ctx.shadowColor = "rgba(251, 191, 36, 0.65)";
+      ctx.shadowBlur = 22;
+      ctx.fillStyle = "rgba(255,255,255,0.34)";
+      ctx.fillRect(x + 12, y + 16, player.w - 24, 8);
+
+      const gradient = ctx.createLinearGradient(x, y, x, y + player.h);
+      gradient.addColorStop(0, "#fef3c7");
+      gradient.addColorStop(0.5, "#fbbf24");
+      gradient.addColorStop(1, "#d97706");
+
+      ctx.fillStyle = gradient;
+      roundRect(ctx, x, y, player.w, player.h, 10);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,0.72)";
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(120, 53, 15, 0.35)";
+      ctx.fillRect(x + 18, y + 7, player.w - 36, 5);
+
+      ctx.restore();
+    }
+
+    function drawItems() {
+      items.forEach((item) => {
+        ctx.save();
+        ctx.translate(item.x + item.size / 2, item.y + item.size / 2);
+
+        if (item.type === "bomb") {
+          ctx.fillStyle = "#fb7185";
+          ctx.beginPath();
+          ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fecdd3";
+          ctx.beginPath();
+          ctx.arc(-4, -4, item.size / 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fde68a";
+          ctx.fillRect(-2, -item.size / 2 - 6, 4, 10);
+        } else {
+          const fill = item.type === "bonus" ? "#c4b5fd" : "#fbbf24";
+          const glow = item.type === "bonus" ? "167,139,250" : "251,191,36";
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = "rgba(" + glow + ",0.45)";
+          ctx.fillStyle = fill;
+          ctx.beginPath();
+          ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = item.type === "bonus" ? "#ddd6fe" : "#fde68a";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, item.size / 2 - 3, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = item.type === "bonus" ? "#faf5ff" : "#fff7cc";
+          ctx.font = "bold 14px Segoe UI";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(item.type === "bonus" ? "★" : "$", 0, 1);
+        }
+
+        ctx.restore();
+      });
+    }
+
+    function drawParticles() {
+      particles.forEach((p) => {
+        ctx.fillStyle = "rgba(" + p.color + "," + Math.max(0, p.life / 40) + ")";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      glowBursts.forEach((glow) => {
+        ctx.fillStyle = "rgba(" + glow.color + "," + glow.alpha + ")";
+        ctx.beginPath();
+        ctx.arc(glow.x, glow.y, glow.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawCombo() {
+      if (combo < 2) {
+        return;
+      }
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      roundRect(ctx, 18, 18, 144, 48, 14);
+      ctx.fill();
+      ctx.fillStyle = "#fde68a";
+      ctx.font = "bold 18px Segoe UI";
+      ctx.fillText("连击 x" + combo, 34, 47);
+      ctx.restore();
+    }
+
+    function render() {
+      drawBackground();
+      drawParticles();
+      drawItems();
+      drawPlayer();
+      drawCombo();
+    }
+
+    function loop(timestamp) {
+      if (!running) {
+        return;
+      }
+      if (!lastTime) {
+        lastTime = timestamp;
+      }
+      const dt = timestamp - lastTime;
+      lastTime = timestamp;
+      update(dt);
+      render();
+      animationId = requestAnimationFrame(loop);
+    }
+
+    function roundRect(context, x, y, w, h, r) {
+      context.beginPath();
+      context.moveTo(x + r, y);
+      context.arcTo(x + w, y, x + w, y + h, r);
+      context.arcTo(x + w, y + h, x, y + h, r);
+      context.arcTo(x, y + h, x, y, r);
+      context.arcTo(x, y, x + w, y, r);
+      context.closePath();
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft" || event.key === "a" || event.key === "A") {
+        keyState.left = true;
+      }
+      if (event.key === "ArrowRight" || event.key === "d" || event.key === "D") {
+        keyState.right = true;
+      }
+      if (event.key === "Escape") {
+        if (running) {
+          pauseGame();
+        } else if (paused) {
+          resumeGame();
+        }
+      }
+    });
+
+    document.addEventListener("keyup", (event) => {
+      if (event.key === "ArrowLeft" || event.key === "a" || event.key === "A") {
+        keyState.left = false;
+      }
+      if (event.key === "ArrowRight" || event.key === "d" || event.key === "D") {
+        keyState.right = false;
+      }
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      if (x < rect.width / 2) {
+        keyState.left = true;
+        keyState.right = false;
+      } else {
+        keyState.right = true;
+        keyState.left = false;
+      }
+    });
+
+    window.addEventListener("pointerup", () => {
+      keyState.left = false;
+      keyState.right = false;
+    });
+
+    startBtn.addEventListener("click", startGame);
+    restartBtn.addEventListener("click", startGame);
+    resumeBtn.addEventListener("click", resumeGame);
+
+    render();
+    updateHud();
+  </script>
+</body>
+</html>
